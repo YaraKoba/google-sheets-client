@@ -1,0 +1,7 @@
+*.xls
+credentials.json
+token.json
+Pipfile.lock
+
+.idea/
+.DS_Store

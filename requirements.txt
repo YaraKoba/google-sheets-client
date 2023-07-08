@@ -1,0 +1,7 @@
+xlrd
+pandas
+phonenumbers
+nameparser
+gspread
+google-api-python-client
+oauth2client
