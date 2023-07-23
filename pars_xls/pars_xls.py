@@ -5,11 +5,12 @@ import re
 REGEX_NAME = r'^(?:.*\n){1}(.*)$'
 REGEX_AMOUNT = r'(\d{4}) RUB'
 REGEX_COMPANY = r'[Xx][Ff]'
-REGEX_SERT_INST = r'(?:(?<=\s)0\d+)|(?<=\s)\d{5,6}(?=\s)'
-REGEX_SERT_XF = r'[Сс]ерт'
-REGEX_VIDEO = r'\+\s?[Вв]идео'
+REGEX_SERT_INST = r'(?:(?<=\s)0\d{4,})|(?<=\s)\d{5,6}(?=\s)'
+REGEX_SERT_XF = r'[Сс]ерт(?:ификат)?'
+REGEX_VIDEO = r'\+\s?[Вв](?:идео)?(?:\s|$)'
 REGEX_TIME = r'^\d{2}:\d{2}'
 REGEX_DOP = r'[Дд]оплата.(\d+)'
+REGEX_PAYMENT = r'[Оо]пла(?:чено|тила?)'
 
 
 def get_data_from_xls(file_path):
@@ -31,6 +32,7 @@ def get_data_from_xls(file_path):
                         'sert': False,
                         'sert_id': 0,
                         'video': False,
+                        'PAID': False,
                         'doplata': 0,
                         }
 
@@ -67,6 +69,9 @@ def get_data_from_xls(file_path):
 
             match_dop = re.search(REGEX_DOP, text)
             tmp_dict['doplata'] = 0 if not match_dop else match_dop.group(1)
+
+            match_payment = re.search(REGEX_PAYMENT, text)
+            tmp_dict['paid'] = True if match_payment else False
 
             data_dict.append(tmp_dict)
 

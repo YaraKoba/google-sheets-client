@@ -93,7 +93,6 @@ class SheetClient:
                 {"range": f"{self.sheet_inf['title']}!{greed}",
                  "majorDimension": "ROWS",  # Сначала заполнять строки, затем столбцы
                  "values": values,
-
                  }
             ]
         }).execute()
@@ -243,10 +242,10 @@ class SheetClient:
                 "addConditionalFormatRule": {
                     "rule": {
                         'ranges': {'sheetId': self.sheet_inf['sheetId'],
-                                  'startRowIndex': sr,
-                                  'endRowIndex': er,
-                                  'startColumnIndex': sc,
-                                  'endColumnIndex': ec},
+                                   'startRowIndex': sr,
+                                   'endRowIndex': er,
+                                   'startColumnIndex': sc,
+                                   'endColumnIndex': ec},
                         "booleanRule": {
                             "condition": {
                                 "type": "NUMBER_GREATER",
@@ -270,3 +269,21 @@ class SheetClient:
                 }
             }
         )
+
+    def add_value_colum(self, sc, ec, values):
+        results = self.service.spreadsheets().values().batchUpdate(spreadsheetId=self.spreadsheet_id, body={
+            "valueInputOption": "USER_ENTERED",
+
+            "data": [
+                {"range": {
+                    "sheetId": self.sheet_inf['sheetId'],
+                    "dimension": "COLUMNS",  # Задаем ширину колонки
+                    "startIndex": sc,  # Нумерация начинается с нуля
+                    "endIndex": ec  # Со столбца номер startIndex по endIndex - 1 (endIndex не входит!)
+                },
+                    "majorDimension": "ROWS",  # Сначала заполнять строки, затем столбцы
+                    "values": values,
+                }
+            ]
+        }).execute()
+        return results

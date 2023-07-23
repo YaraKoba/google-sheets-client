@@ -1,0 +1,5 @@
+[File]
+file_path = path_in_xls_file
+
+[sheet]
+sheet_id = your_sheet_id
