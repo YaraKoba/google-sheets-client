@@ -2,7 +2,9 @@
 credentials.json
 token.json
 Pipfile.lock
-
-.idea/
 .DS_Store
 config.ini
+
+.idea/
+__pycache__
+
