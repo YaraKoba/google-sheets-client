@@ -5,7 +5,7 @@ import re
 REGEX_NAME = r'^(?:.*\n){1}(.*)$'
 REGEX_AMOUNT = r'(\d{4}) RUB'
 REGEX_COMPANY = r'[Xx][Ff]'
-REGEX_SERT_INST = r'(?:(?<=\s)0\d{4,})|(?<=\s)\d{5,6}(?=\s)'
+REGEX_SERT_INST = r'(?<=\s)\d{4,8}(?=\s|$)'
 REGEX_SERT_XF = r'[Сс]ерт(?:ификат)?'
 REGEX_VIDEO = r'\+\s?[Вв](?:идео)?(?:\s|$)'
 REGEX_TIME = r'^\d{2}:\d{2}'

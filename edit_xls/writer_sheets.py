@@ -42,7 +42,7 @@ def add_info(inf, client: SheetClient):
             amount = 0
             polet = 'оплачено'
 
-        if amount > 0:
+        if int(amount) > 0:
             client.add_one_of_list(n + 2, n + 3, 7, 8)
 
         val.append([i['time'], i['name'], i['number'], i_sert, amount, polet, video])
