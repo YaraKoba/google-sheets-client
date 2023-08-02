@@ -16,6 +16,16 @@ def get_date_from_file(file_name: str):
 
     return result
 
+
+def get_date_from_str(time: str):
+    regex = r"(\d{4})-(\d{2})-(\d{2})"
+    math = re.search(regex, time)
+    day = math.group(3)
+    month = math.group(2)
+
+    return f"{day} {MONTH[month]}"
+
+
 if __name__ == "__main__":
-    res = get_date_from_file('journal_20230725.xls')
+    res = get_date_from_str('2023-08-01 19:00:00')
     print(res)

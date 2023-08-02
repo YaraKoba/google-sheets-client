@@ -4,6 +4,7 @@ token.json
 Pipfile.lock
 .DS_Store
 config.ini
+.env
 
 .idea/
 __pycache__
