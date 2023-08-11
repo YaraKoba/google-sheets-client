@@ -99,7 +99,7 @@ def create_report(clients_inf, title, sheet_is):
     sheet.connect()
     sheet_list = sheet.add_sheet_list(title, len(clients_inf) + 5, 15)
     client = sheet.get_client_object(sheet_list['replies'][0]['addSheet'])
-    print('Create done')
+    print(f'Create {title} done')
     return client
 
 

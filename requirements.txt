@@ -5,3 +5,4 @@ nameparser==1.1.2
 gspread==5.10.0
 google-api-python-client==2.95.0
 oauth2client==4.1.3
+python-dotenv

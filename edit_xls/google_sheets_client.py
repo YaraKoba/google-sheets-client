@@ -1,6 +1,7 @@
 from __future__ import print_function
-
+import os
 import os.path
+from dotenv import load_dotenv
 from typing import List
 
 from google.auth.transport.requests import Request
@@ -9,6 +10,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+load_dotenv()
 
 class SheetInit:
     def __init__(self, spreadsheet_id):
@@ -45,19 +47,21 @@ class SheetInit:
         return results
 
     def connect(self):
+
+        work_dir = os.getenv("work_dir")
         SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
-        if os.path.exists('edit_xls/keys/token.json'):
-            self.creds = Credentials.from_authorized_user_file('edit_xls/keys/token.json', SCOPES)
+        if os.path.exists(f'{work_dir}edit_xls/keys/token.json'):
+            self.creds = Credentials.from_authorized_user_file(f'{work_dir}edit_xls/keys/token.json', SCOPES)
         # If there are no (valid) credentials available, let the user log in.
         if not self.creds or not self.creds.valid:
             if self.creds and self.creds.expired and self.creds.refresh_token:
                 self.creds.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    'edit_xls/keys/credentials.json', SCOPES)
+                    f'{work_dir}edit_xls/keys/credentials.json', SCOPES)
                 self.creds = flow.run_local_server(port=0)
             # Save the credentials for the next run
-            with open('edit_xls/keys/token.json', 'w') as token:
+            with open(f'{work_dir}edit_xls/keys/token.json', 'w') as token:
                 token.write(self.creds.to_json())
 
     def get_client_object(self, sheet_inf):

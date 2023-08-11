@@ -56,9 +56,6 @@ def get_data_from_dikidi(tilda):
 
     lists = api.get_appointment_list(company_id=company_id, date_start=date_object, date_end=date_object, limit=50)
 
-    for i in lists:
-        print(i)
-
     data_dict = []
     for l in lists:
         tmp_str = ""
@@ -70,7 +67,6 @@ def get_data_from_dikidi(tilda):
         one_client = search_inf_in_text(tmp_str)
 
         data_dict.append(one_client)
-
     date = get_date_from_str(lists[0]["time"])
     sorted_clients = sorted(data_dict, key=lambda x: x["time"])
     return date, sorted_clients

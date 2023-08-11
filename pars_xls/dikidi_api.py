@@ -31,7 +31,6 @@ class DikidiAPI:
                 'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36'
             }
         )
-        print(response.json())
         if 'callback' in response.json():
             if 'sw.auth.complete(' in response.json()['callback']:
                 # logging.info('Auth complete')
