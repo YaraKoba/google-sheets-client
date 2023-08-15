@@ -3,14 +3,15 @@ import os
 import os.path
 from dotenv import load_dotenv
 from typing import List
+from utils.config_val import WORK_DIR
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
 
 load_dotenv()
+
 
 class SheetInit:
     def __init__(self, spreadsheet_id):
@@ -47,8 +48,7 @@ class SheetInit:
         return results
 
     def connect(self):
-
-        work_dir = os.getenv("work_dir")
+        work_dir = WORK_DIR
         SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
         if os.path.exists(f'{work_dir}edit_xls/keys/token.json'):
             self.creds = Credentials.from_authorized_user_file(f'{work_dir}edit_xls/keys/token.json', SCOPES)
@@ -88,6 +88,14 @@ class SheetClient:
         print(results['sheets'][0]['data'][0]['rowMetadata'])
         print('\nШирина ячейки')
         print(results['sheets'][0]['data'][0]['columnMetadata'])
+
+    def get_data_from_sheet(self):
+        results = self.service.spreadsheets().values().batchGet(spreadsheetId=self.spreadsheet_id,
+                                                                ranges=self.sheet_inf['title'],
+                                                                valueRenderOption='FORMATTED_VALUE',
+                                                                dateTimeRenderOption='FORMATTED_STRING').execute()
+        sheet_values = results['valueRanges'][0]['values']
+        return sheet_values
 
     def add_values(self, greed, values: [List]):
         results = self.service.spreadsheets().values().batchUpdate(spreadsheetId=self.spreadsheet_id, body={

@@ -1,5 +1,5 @@
 from __future__ import print_function
-
+from utils.errors import SheetNotFoundByTitleError
 from edit_xls.google_sheets_client import SheetInit, SheetClient
 from utils.formats import *
 from googleapiclient.errors import HttpError
@@ -94,26 +94,36 @@ def add_data(clients_inf, client: SheetClient):
     print("Info done")
 
 
-def create_report(clients_inf, title, sheet_is):
-    sheet = SheetInit(sheet_is)
-    sheet.connect()
-    sheet_list = sheet.add_sheet_list(title, len(clients_inf) + 5, 15)
-    client = sheet.get_client_object(sheet_list['replies'][0]['addSheet'])
-    print(f'Create {title} done')
-    return client
+class Connector:
+    def __init__(self, sheet_id):
+        self.sheet = SheetInit(sheet_id)
+        self.sheet.connect()
 
+    def create_report(self, clients_inf, title):
+        sheet_list = self.sheet.add_sheet_list(title, len(clients_inf)+5, 15)
+        client = self.sheet.get_client_object(sheet_list['replies'][0]['addSheet'])
+        print(f'Create {title} done')
+        return client
 
-def get_index_sheet(index, sheet_is):
-    sheet = SheetInit(sheet_is)
-    sheet.connect()
-    sheet_list = sheet.get_sheets()
-    client = sheet.get_client_object(sheet_list[index])
-    return client
+    def get_sheet_by_title(self, title: str):
+        sheet_lists = self.sheet.get_sheets()
+        current_sheet = {}
+        for one_list in sheet_lists:
+            if one_list['properties']['title'] == title:
+                current_sheet = one_list
+                break
 
+        if not current_sheet:
+            raise SheetNotFoundByTitleError({"title": title})
 
-def get_inf_cell(cell, sheet_is):
-    sheet = SheetInit(sheet_is)
-    sheet.connect()
-    sheet_list = sheet.get_sheets()
-    client = sheet.get_client_object(sheet_list[0])
-    client.get_format(cell)
+        client = self.sheet.get_client_object(current_sheet)
+        return client
+
+    def read_sheet_by_id(self, title: str):
+        client = self.get_sheet_by_title(title)
+        return client.get_data_from_sheet()
+
+    def get_inf_cell(self, cell):
+        sheet_list = self.sheet.get_sheets()
+        client = self.sheet.get_client_object(sheet_list[0])
+        client.get_format(cell)

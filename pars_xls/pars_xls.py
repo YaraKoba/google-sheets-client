@@ -1,10 +1,9 @@
 import datetime
-import os
 import re
-
+from utils.config_val import DIKIDI_COMPANY_ID, DIKIDI_LOGIN, DIKIDI_PASSWORD
 from dotenv import load_dotenv
 from pars_xls.dikidi_api import DikidiAPI
-
+from utils.errors import DayIsEmptyError
 import pandas as pd
 import phonenumbers
 
@@ -13,9 +12,9 @@ from utils.date_client import get_date_from_str
 REGEX_NAME = r'^(?:.*\n){1}(.*)$'
 REGEX_AMOUNT = r'(\d{4}) RUB'
 REGEX_COMPANY = r'[Xx][Ff]'
-REGEX_SERT_INST = r'(?<=\s)\d{5,8}(?=\s|$)'
+REGEX_SERT_INST = r'\b\d{5,8}\b'
 REGEX_SERT_XF = r'[Сс]ерт(?:ификат)?'
-REGEX_VIDEO = r'\+\s?[Вв](?:идео)?(?:\s|$)'
+REGEX_VIDEO = r'\+\s?[Вв](?:идео)?\b'
 REGEX_TIME = r'\d{2}:\d{2}'
 REGEX_DOP = r'[Дд]оплата.(\d+)'
 REGEX_PAYMENT = r'[Оо]пла(?:чено|тила?)'
@@ -43,9 +42,9 @@ def get_data_from_xls(file_path):
 
 
 def get_data_from_dikidi(tilda):
-    log = os.getenv("login")
-    password = os.getenv("password")
-    company_id = os.getenv("company_id")
+    log = DIKIDI_LOGIN
+    password = DIKIDI_PASSWORD
+    company_id = DIKIDI_COMPANY_ID
 
     date_object = datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=tilda),
                                             datetime.time.min).strftime('%Y-%m-%d')
@@ -55,6 +54,9 @@ def get_data_from_dikidi(tilda):
         password=password)
 
     lists = api.get_appointment_list(company_id=company_id, date_start=date_object, date_end=date_object, limit=50)
+
+    if not lists:
+        raise DayIsEmptyError("Day is empty, change day or add clients in dikidi")
 
     data_dict = []
     for l in lists:
