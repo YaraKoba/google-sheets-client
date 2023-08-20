@@ -1,8 +1,48 @@
 from __future__ import print_function
+
+import datetime
+from typing import List
+
 from utils.errors import SheetNotFoundByTitleError
 from edit_xls.google_sheets_client import SheetInit, SheetClient
 from utils.formats import *
 from googleapiclient.errors import HttpError
+
+
+class Connector:
+    def __init__(self, sheet_id):
+        self.sheet = SheetInit(sheet_id)
+        self.sheet.connect()
+
+    def create_report(self, clients_inf, title):
+        sheet_list = self.sheet.add_sheet_list(title, len(clients_inf) + 5, 15)
+        client = self.sheet.get_client_object(sheet_list['replies'][0]['addSheet'])
+        print(f'Create {title} done')
+        return client
+
+    def get_sheet_by_title(self, title: str):
+        print(f"reading sheet {title}")
+        sheet_lists = self.sheet.get_sheets()
+        current_sheet = {}
+        for one_list in sheet_lists:
+            if one_list['properties']['title'] == title:
+                current_sheet = one_list
+                break
+
+        if not current_sheet:
+            raise SheetNotFoundByTitleError({"title": title})
+
+        client = self.sheet.get_client_object(current_sheet)
+        return client
+
+    def read_sheet_by_id(self, title: str):
+        client = self.get_sheet_by_title(title)
+        return client.get_data_from_sheet()
+
+    def get_inf_cell(self, cell):
+        sheet_list = self.sheet.get_sheets()
+        client = self.sheet.get_client_object(sheet_list[0])
+        client.get_format(cell)
 
 
 def add_info(inf, client: SheetClient):
@@ -88,42 +128,81 @@ def add_format(inf, client: SheetClient):
     client.add_values('B1', [[client.sheet_inf['title']]])
 
 
+def is_datetime(date):
+    try:
+        datetime.datetime.strptime(date, "%d.%m.%y")
+        return True
+    except ValueError:
+        return False
+
+
+def get_end_entry(sheet_data: List[List[str]]):
+    for index in range(len(sheet_data) - 1, 0, -1):
+        line = sheet_data[index]
+        if line and is_datetime(line[0]):
+            return index + 1
+
+
+def add_global_format(cl: SheetClient, len_new_inf: int, start_point: int):
+    start_point -= 1
+    end_point = start_point + len_new_inf
+
+    cl.add_conditional_format_rule(start_point, end_point, 6, 7, bg_rgba=COLOR_CERT, user_entered_value=-5500)
+    cl.add_conditional_format_rule(start_point, end_point, 3, 4, bg_rgba=COLOR_XF, user_entered_value="XF",
+                                   type_rule="TEXT_CONTAINS")
+    cl.add_conditional_format_rule(start_point, end_point, 3, 4, bg_rgba=COLOR_CERT, user_entered_value=2,
+                                   type_rule="TEXT_CONTAINS")
+
+    # border
+    cl.format_cell(start_point, end_point, 0, 1, bg_rgba=COLOR_DATE, bold=False, font_size=12)
+
+    # table
+    cl.format_cell(start_point, end_point, 1, 13, font_size=13)
+
+    cl.update_borders(start_point, end_point, 0, 13)
+    cl.update_borders(start_point, start_point + 1, 0, 13, width_top=3)
+    cl.execute()
+
+
+def add_to_global_report(google: Connector, report, title):
+    client = google.get_sheet_by_title(title)
+
+    data = client.get_data_from_sheet()
+    end_entry = get_end_entry(data) + 1
+
+    add_global_format(client, len(report), end_entry)
+    client.add_values(f"A{end_entry}:M{end_entry + len(report)}", report)
+
+
 def add_data(clients_inf, client: SheetClient):
     add_info(clients_inf, client)
     add_format(clients_inf, client)
     print("Info done")
 
 
-class Connector:
-    def __init__(self, sheet_id):
-        self.sheet = SheetInit(sheet_id)
-        self.sheet.connect()
+def get_amount(company: str):
+    return "4000" if company in ["'XF нал", "XF серт"] else "4500"
 
-    def create_report(self, clients_inf, title):
-        sheet_list = self.sheet.add_sheet_list(title, len(clients_inf)+5, 15)
-        client = self.sheet.get_client_object(sheet_list['replies'][0]['addSheet'])
-        print(f'Create {title} done')
-        return client
 
-    def get_sheet_by_title(self, title: str):
-        sheet_lists = self.sheet.get_sheets()
-        current_sheet = {}
-        for one_list in sheet_lists:
-            if one_list['properties']['title'] == title:
-                current_sheet = one_list
-                break
+def get_video(video: str):
+    if video in ["карта ярику", "нал"]:
+        return "300"
+    elif video == "оплачено":
+        return "-200"
+    else:
+        return ''
 
-        if not current_sheet:
-            raise SheetNotFoundByTitleError({"title": title})
 
-        client = self.sheet.get_client_object(current_sheet)
-        return client
+def create_total_report(daily_report: List[List[str]], date):
+    result = []
+    for line_index in range(2, len(daily_report)):
+        line = daily_report[line_index]
 
-    def read_sheet_by_id(self, title: str):
-        client = self.get_sheet_by_title(title)
-        return client.get_data_from_sheet()
+        if line and line[1] == "TRUE":
+            amount = get_amount(line[5])
+            video = get_video(line[8])
+            result.append([
+                date, line[4], line[3], line[5], amount, video
+            ])
 
-    def get_inf_cell(self, cell):
-        sheet_list = self.sheet.get_sheets()
-        client = self.sheet.get_client_object(sheet_list[0])
-        client.get_format(cell)
+    return result

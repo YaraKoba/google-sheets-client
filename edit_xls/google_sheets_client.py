@@ -1,4 +1,6 @@
 from __future__ import print_function
+
+import json
 import os
 import os.path
 from dotenv import load_dotenv
@@ -80,14 +82,19 @@ class SheetClient:
 
         results = self.service.spreadsheets().get(spreadsheetId=self.spreadsheet_id,
                                                   ranges=ranges, includeGridData=True).execute()
-        print('Основные данные')
-        print(results['properties'])
-        print('\nЗначения и раскраска')
-        print(results['sheets'][0]['data'][0]['rowData'])
-        print('\nВысота ячейки')
-        print(results['sheets'][0]['data'][0]['rowMetadata'])
-        print('\nШирина ячейки')
-        print(results['sheets'][0]['data'][0]['columnMetadata'])
+        # print('Основные данные')
+        # print(results['properties'])
+        # print('\nЗначения и раскраска')
+        # print(results['sheets'][0]['data'][0]['rowData'])
+        # print('\nВысота ячейки')
+        # print(results['sheets'][0]['data'][0]['rowMetadata'])
+        # print('\nШирина ячейки')
+        # print(results['sheets'][0]['data'][0]['columnMetadata'])
+
+        bg = results['sheets'][0]['data'][0]['rowData'][0]['values'][0]['effectiveFormat']['backgroundColor']
+        value = results['sheets'][0]['data'][0]['rowData'][0]['values'][0]['formattedValue']
+
+        return value, bg
 
     def get_data_from_sheet(self):
         results = self.service.spreadsheets().values().batchGet(spreadsheetId=self.spreadsheet_id,
@@ -157,8 +164,8 @@ class SheetClient:
                            'endColumnIndex': ec},
                  'mergeType': 'MERGE_ALL'}})
 
-    def update_borders(self, sr, er, sc, ec):
-        # Рисуем рамку
+    def update_borders(self, sr, er, sc, ec, width_top: int = 1):
+
         self.data_body['requests'].append({'updateBorders': {'range': {'sheetId': self.sheet_inf['sheetId'],
                                                                        'startRowIndex': sr,
                                                                        'endRowIndex': er,
@@ -171,7 +178,7 @@ class SheetClient:
                                                                            'alpha': 1}},  # Черный цвет
                                                              'top': {  # Задаем стиль для нижней границы
                                                                  'style': 'SOLID',
-                                                                 'width': 1,
+                                                                 'width': width_top,
                                                                  'color': {'red': 0, 'green': 0, 'blue': 0,
                                                                            'alpha': 1}},
                                                              'left': {  # Задаем стиль для левой границы
@@ -198,9 +205,11 @@ class SheetClient:
 
                                                              }})
 
-    def format_cell(self, sr, er, sc, ec, bg_rgba=None, bold=False, font_size=12, horizontal_alignment='CENTER'):
-        if not bg_rgba:
-            bg_rgba = [255, 255, 255, 1]
+    def format_cell(self, sr, er, sc, ec, bg_rgba: List = (255, 255, 255, 1,), bold=False, font_size=12, horizontal_alignment='CENTER'):
+
+        if len(bg_rgba) < 4:
+            bg_rgba.append(1)
+
         self.data_body['requests'].append(
             {
                 "repeatCell":
@@ -248,7 +257,14 @@ class SheetClient:
             }
         })
 
-    def add_conditional_format_rule(self, sr, er, sc, ec, bg_rgba):
+    def add_conditional_format_rule(self, sr, er, sc, ec, bg_rgba: List, user_entered_value: int | str = 0,
+                                    type_rule: str = "NUMBER_GREATER"):
+
+        # check any type_rule
+        # https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/other?hl=ru#ConditionType
+        if len(bg_rgba) < 4:
+            bg_rgba.append(1)
+
         self.data_body['requests'].append(
             {
                 "addConditionalFormatRule": {
@@ -260,10 +276,10 @@ class SheetClient:
                                    'endColumnIndex': ec},
                         "booleanRule": {
                             "condition": {
-                                "type": "NUMBER_GREATER",
+                                "type": f"{type_rule}",
                                 "values": [
                                     {
-                                        "userEnteredValue": "0"
+                                        "userEnteredValue": f"{user_entered_value}"
                                     }
                                 ]
                             },
