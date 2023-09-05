@@ -41,13 +41,16 @@ def get_data_from_xls(file_path):
     return data_dict
 
 
-def get_data_from_dikidi(tilda):
+def get_data_from_dikidi(tilda: int | datetime.datetime):
     log = DIKIDI_LOGIN
     password = DIKIDI_PASSWORD
     company_id = DIKIDI_COMPANY_ID
 
-    date_object = datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=tilda),
-                                            datetime.time.min).strftime('%Y-%m-%d')
+    if type(tilda) == int:
+        date_object = datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=tilda),
+                                                datetime.time.min).strftime('%Y-%m-%d')
+    else:
+        date_object = tilda
 
     api = DikidiAPI(
         login=log,
@@ -67,8 +70,8 @@ def get_data_from_dikidi(tilda):
         tmp_str += l["client_phone"] + "\n"
         tmp_str += l["comment"] if l["comment"] else ''
         one_client = search_inf_in_text(tmp_str)
-
         data_dict.append(one_client)
+
     date = get_date_from_str(lists[0]["time"])
     sorted_clients = sorted(data_dict, key=lambda x: x["time"])
     return date, sorted_clients

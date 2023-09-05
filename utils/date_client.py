@@ -30,7 +30,7 @@ def get_date_from_str(time: str):
     return f"{day} {MONTH[month]}"
 
 
-def get_date_from_str_dot(time: str):
+def get_date_to_daly_report(time: str):
     print(time)
     regex = r"(\d{2}).(\d{2}).(\d{2})"
     math = re.search(regex, time)
@@ -39,7 +39,8 @@ def get_date_from_str_dot(time: str):
 
     return f"{day} {MONTH[month]}"
 
-def get_inf_date_from_str_dot(time: str):
+
+def get_date_to_general_report(time: str):
     regex = r"(\d{2}).(\d{2}).(\d{2})"
     math = re.search(regex, time)
     year = math.group(3)

@@ -4,8 +4,10 @@ from utils.parser_input import AIGUL
 from edit_xls.writer_sheets import Connector
 from edit_xls.google_sheets_client import SheetClient
 from utils.formats import YELLOW
+from pydantic import BaseModel
+from dataclasses import dataclass
 
-REGEX_cert_INST = r'\b\d{5,8}\b'
+REGEX_CERT_INST = r'\b\d{5,8}\b'
 
 
 def get_clients(sheets, group: str) -> SheetClient:
@@ -120,10 +122,10 @@ def update_cert(searched_cert: Dict[str, Dict[str, SheetClient | Dict[int, Dict[
 
 
 def check_and_update_cert(google_sheet: Connector, total_report: List[List[str]], sheet_titles: List):
-    sheets = {title: google_sheet.get_sheet_by_title(title) for title in sheet_titles}
+    sheets = {title: google_sheet.get_client_by_title(title) for title in sheet_titles}
     cert_groups = {t: [] for t in sheet_titles}
     for line in total_report:
-        math = re.search(REGEX_cert_INST, line[3])
+        math = re.search(REGEX_CERT_INST, line[3])
         if math:
             cert_number = math.group(0)
             title_cert = "Серт 20" + separate_cert(cert_number)[1]
@@ -147,8 +149,9 @@ def check_and_update_cert(google_sheet: Connector, total_report: List[List[str]]
     print(update_certs)
     aigul = 3000 / len(total_report) * AIGUL
     our, xf_cash, xf_cert = 0, 0, 0
+
     for line in range(len(total_report)):
-        math = re.search(REGEX_cert_INST, total_report[line][3])
+        math = re.search(REGEX_CERT_INST, total_report[line][3])
         if math:
             cert_number = ''.join(separate_cert(math.group(0)))
             if int(cert_number) in update_certs['done']:

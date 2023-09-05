@@ -6,6 +6,7 @@ from typing import List
 from utils.errors import SheetNotFoundByTitleError
 from edit_xls.google_sheets_client import SheetInit, SheetClient
 from utils.formats import *
+from utils.config_val import AMOUNT
 from googleapiclient.errors import HttpError
 
 
@@ -20,7 +21,7 @@ class Connector:
         print(f'Create {title} done')
         return client
 
-    def get_sheet_by_title(self, title: str):
+    def get_client_by_title(self, title: str):
         print(f"reading sheet {title}")
         sheet_lists = self.sheet.get_sheets()
         current_sheet = {}
@@ -35,8 +36,8 @@ class Connector:
         client = self.sheet.get_client_object(current_sheet)
         return client
 
-    def read_sheet_by_id(self, title: str):
-        client = self.get_sheet_by_title(title)
+    def read_sheet_by_title(self, title: str):
+        client = self.get_client_by_title(title)
         return client.get_data_from_sheet()
 
     def get_inf_cell(self, cell):
@@ -66,7 +67,7 @@ def add_info(inf, client: SheetClient):
                 polet = 'оплачено' if int(i['doplata']) == 0 else ''
             else:
                 i_sert += ' нал'
-                amount = 4500
+                amount = AMOUNT
                 polet = ''
         else:
             if i['sert']:
@@ -75,7 +76,7 @@ def add_info(inf, client: SheetClient):
                 polet = 'оплачено' if int(i['doplata']) == 0 else ''
             else:
                 i_sert = 'Инст'
-                amount = 4500
+                amount = AMOUNT
                 polet = ''
 
         if i['paid']:
@@ -165,7 +166,7 @@ def add_global_format(cl: SheetClient, len_new_inf: int, start_point: int):
 
 
 def add_to_global_report(google: Connector, report, title):
-    client = google.get_sheet_by_title(title)
+    client = google.get_client_by_title(title)
 
     data = client.get_data_from_sheet()
     end_entry = get_end_entry(data) + 1
@@ -180,8 +181,8 @@ def add_data(clients_inf, client: SheetClient):
     print("Info done")
 
 
-def get_amount(company: str):
-    return "4000" if company in ["'XF нал", "XF серт"] else "4500"
+def get_amount(company: str) -> str:
+    return str(AMOUNT - 500) if company in ["XF нал", "XF серт"] else str(AMOUNT)
 
 
 def get_video(video: str):
@@ -198,7 +199,7 @@ def create_total_report(daily_report: List[List[str]], date):
     for line_index in range(2, len(daily_report)):
         line = daily_report[line_index]
 
-        if line and line[1] == "TRUE":
+        if len(line) > 1 and line[1] == "TRUE":
             amount = get_amount(line[5])
             video = get_video(line[8])
             result.append([

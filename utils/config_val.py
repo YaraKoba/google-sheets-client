@@ -1,3 +1,4 @@
+import configparser
 import os
 from dotenv import load_dotenv
 
@@ -7,6 +8,22 @@ WORK_DIR = os.getenv("WORK_DIR")
 DIKIDI_PASSWORD = os.getenv("DIKIDI_PASSWORD")
 DIKIDI_LOGIN = os.getenv("DIKIDI_LOGIN")
 DIKIDI_COMPANY_ID = os.getenv("DIKIDI_COMPANY_ID")
+
+
+def load_config():
+    conf = configparser.ConfigParser()
+    conf.read(f'{WORK_DIR}config.ini')
+    return conf
+
+
+config = load_config()
+
+SIMPLE_SHEET_ID = config.get('sheet', 'sheet_id', fallback='')
+GENERAL_SHEET_ID = config.get('sheet', "sheet_id_general_report", fallback='')
+IS_FROM_FILE_CONF = config.getboolean('set', 'from_file', fallback=False)
+TILDA_CONF = config.getint('conf', 'tilda', fallback=0)
+FILE_PATH = config.get('File', 'file_path', fallback='')
+AMOUNT = config.getint('conf', 'amount', fallback=5000)
 
 
 def check_env_val():
