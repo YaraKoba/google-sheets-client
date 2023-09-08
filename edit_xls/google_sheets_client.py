@@ -26,7 +26,7 @@ class SheetInit:
         sheet_list = spreadsheet.get('sheets')
         return sheet_list
 
-    def add_sheet_list(self, title, row_count, colum_count):
+    def add_sheet_list(self, title):
         service = build('sheets', 'v4', credentials=self.creds)
         results = service.spreadsheets().batchUpdate(
             spreadsheetId=self.SPREADSHEET_ID,
@@ -37,10 +37,6 @@ class SheetInit:
                         "addSheet": {
                             "properties": {
                                 "title": title,
-                                "gridProperties": {
-                                    "rowCount": row_count,
-                                    "columnCount": colum_count
-                                }
                             }
                         }
                     }
@@ -104,7 +100,18 @@ class SheetClient:
         sheet_values = results['valueRanges'][0]['values']
         return sheet_values
 
-    def add_values(self, greed, values: [List]):
+    @staticmethod
+    def convert_to_a1_notation(sr, er, sc, ec):
+        start_col = chr(ord('A') + sc)
+        end_col = chr(ord('A') + ec)
+        if ec >= 26:
+            end_col = chr(ord('A') + (ec // 26) - 1) + chr(ord('A') + (ec % 26))
+        a1_notation = f'{start_col}{sr + 1}:{end_col}{er + 1}'
+        return a1_notation
+
+    def add_values(self, greed: List, values: List[List[str]]):
+        start_row, end_row, sc, ec = greed
+        greed = self.convert_to_a1_notation(start_row, end_row, sc, ec)
         results = self.service.spreadsheets().values().batchUpdate(spreadsheetId=self.spreadsheet_id, body={
             "valueInputOption": "USER_ENTERED",
             # Данные воспринимаются, как вводимые пользователем (считается значение формул)
@@ -122,10 +129,11 @@ class SheetClient:
             spreadsheetId=self.spreadsheet_id,
             body=self.data_body
         ).execute()
-
+        self.data_body = {"requests": []}
         return results
 
-    def add_bool(self, sr, er, sc, ec):
+    def add_bool(self, greed: List,):
+        sr, er, sc, ec = greed
         self.data_body['requests'].append({
             'repeatCell':
                 {'range': {'sheetId': self.sheet_inf['sheetId'],
@@ -136,7 +144,14 @@ class SheetClient:
                  'cell': {'dataValidation': {'condition': {'type': 'BOOLEAN'}}},
                  'fields': 'dataValidation'}})
 
-    def add_one_of_list(self, sr, er, sc, ec):
+    def add_one_of_list(self, greed: List[int], values: List[str]):
+        # [{'userEnteredValue': 'нал'},
+        #  {'userEnteredValue': 'карта ярику'},
+        #  {'userEnteredValue': '-'}]
+
+        sr, er, sc, ec = greed
+        values_dict = [{'userEnteredValue': value} for value in values]
+
         self.data_body['requests'].append({
             'repeatCell':
                 {'range': {'sheetId': self.sheet_inf['sheetId'],
@@ -145,16 +160,15 @@ class SheetClient:
                            'startColumnIndex': sc,
                            'endColumnIndex': ec},
                  'cell': {'dataValidation': {'condition': {'type': 'ONE_OF_LIST',
-                                                           'values': [{'userEnteredValue': 'нал'},
-                                                                      {'userEnteredValue': 'карта ярику'},
-                                                                      {'userEnteredValue': '-'}]
+                                                           'values': values_dict
                                                            },
                                              'strict': True,
                                              'showCustomUi': True},
                           },
                  'fields': 'dataValidation'}})
 
-    def merge_cells(self, sr, er, sc, ec):
+    def merge_cells(self, greed: List):
+        sr, er, sc, ec = greed
         self.data_body['requests'].append({
             'mergeCells':
                 {'range': {'sheetId': self.sheet_inf['sheetId'],
@@ -164,8 +178,8 @@ class SheetClient:
                            'endColumnIndex': ec},
                  'mergeType': 'MERGE_ALL'}})
 
-    def update_borders(self, sr, er, sc, ec, width_top: int = 1):
-
+    def update_borders(self, greed: List, width_top: int = 1):
+        sr, er, sc, ec = greed
         self.data_body['requests'].append({'updateBorders': {'range': {'sheetId': self.sheet_inf['sheetId'],
                                                                        'startRowIndex': sr,
                                                                        'endRowIndex': er,
@@ -205,11 +219,11 @@ class SheetClient:
 
                                                              }})
 
-    def format_cell(self, sr, er, sc, ec, bg_rgba: List = (255, 255, 255, 1,), bold=False, font_size=12, horizontal_alignment='CENTER'):
-
+    def format_cell(self, greed: List, bg_rgba: List = (255, 255, 255, 1,), bold=False, font_size=12,
+                    horizontal_alignment='CENTER'):
+        sr, er, sc, ec = greed
         if len(bg_rgba) < 4:
             bg_rgba.append(1)
-
         self.data_body['requests'].append(
             {
                 "repeatCell":
@@ -241,7 +255,8 @@ class SheetClient:
                     }
             })
 
-    def update_dimension(self, cs, ce, size):
+    def update_dimension(self, greed: List, size: int):
+        cs, ce = greed[2], greed[3]
         self.data_body['requests'].append({
             "updateDimensionProperties": {
                 "range": {
@@ -257,9 +272,9 @@ class SheetClient:
             }
         })
 
-    def add_conditional_format_rule(self, sr, er, sc, ec, bg_rgba: List, user_entered_value: int | str = 0,
+    def add_conditional_format_rule(self, greed: List, bg_rgba: List, user_entered_value: int | str = 0,
                                     type_rule: str = "NUMBER_GREATER"):
-
+        sr, er, sc, ec = greed
         # check any type_rule
         # https://developers.google.com/sheets/api/reference/rest/v4/spreadsheets/other?hl=ru#ConditionType
         if len(bg_rgba) < 4:

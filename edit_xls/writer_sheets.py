@@ -5,9 +5,8 @@ from typing import List
 
 from utils.errors import SheetNotFoundByTitleError
 from edit_xls.google_sheets_client import SheetInit, SheetClient
-from utils.formats import *
+from editer.formats import *
 from utils.config_val import AMOUNT
-from googleapiclient.errors import HttpError
 
 
 class Connector:
@@ -15,8 +14,8 @@ class Connector:
         self.sheet = SheetInit(sheet_id)
         self.sheet.connect()
 
-    def create_report(self, clients_inf, title):
-        sheet_list = self.sheet.add_sheet_list(title, len(clients_inf) + 5, 15)
+    def create_report(self, title) -> SheetClient:
+        sheet_list = self.sheet.add_sheet_list(title)
         client = self.sheet.get_client_object(sheet_list['replies'][0]['addSheet'])
         print(f'Create {title} done')
         return client

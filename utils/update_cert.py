@@ -3,9 +3,7 @@ from typing import List, Dict
 from utils.parser_input import AIGUL
 from edit_xls.writer_sheets import Connector
 from edit_xls.google_sheets_client import SheetClient
-from utils.formats import YELLOW
-from pydantic import BaseModel
-from dataclasses import dataclass
+from editer.formats import YELLOW
 
 REGEX_CERT_INST = r'\b\d{5,8}\b'
 
@@ -58,7 +56,7 @@ def separate_cert(cert: str):
     return one_format_to_cert((month, year, number,))
 
 
-def two_point_search(cert: List, data: List[List[str]]) -> Dict:
+def two_point_search(cert: List[str], data: List[List[str]]) -> Dict:
     cert = sorted([int(''.join(separate_cert(c))) for c in cert])
     len_data = len(data)
     left, right, middle = 2, len_data, len_data // 2
@@ -77,11 +75,11 @@ def two_point_search(cert: List, data: List[List[str]]) -> Dict:
 
         right = len_data
         if left >= middle and int(''.join(separate_cert(data[middle][0]))) != num_cert:
-            result_dict[num_cert] = {'is_define': False, 'line': None}
+            result_dict[str(num_cert)] = {'is_define': False, 'line': None}
             left = middle
             middle = (left + right) // 2
         else:
-            result_dict[num_cert] = {'is_define': True, 'line': middle + 1}
+            result_dict[str(num_cert)] = {'is_define': True, 'line': middle + 1}
 
     return result_dict
 

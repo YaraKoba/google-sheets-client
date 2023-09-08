@@ -1,11 +1,12 @@
 import datetime
 import re
-from utils.config_val import DIKIDI_COMPANY_ID, DIKIDI_LOGIN, DIKIDI_PASSWORD
+from utils.config_val import DIKIDI_COMPANY_ID, DIKIDI_LOGIN, DIKIDI_PASSWORD, AMOUNT
 from dotenv import load_dotenv
 from pars_xls.dikidi_api import DikidiAPI
 from utils.errors import DayIsEmptyError
 import pandas as pd
 import phonenumbers
+from models.passnger_models import Certificate, NewPassenger
 
 from utils.date_client import get_date_from_str
 
@@ -22,108 +23,111 @@ REGEX_PAYMENT = r'[Оо]пла(?:чено|тила?)'
 load_dotenv()
 
 
-def get_data_from_xls(file_path):
-    # Чтение файла XLS
-    df = pd.read_excel(file_path, index_col=0)
+class NewPassengers:
+    def __init__(self, date: int | datetime.datetime):
+        if type(date) == int:
+            self.date_object = datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=date),
+                                                         datetime.time.min)
+        else:
+            self.date_object = date
 
-    # Инициализация словаря
-    data_dict = []
+    def get_data_from_xls(self, file_path):
+        df = pd.read_excel(file_path, index_col=0)
+        data_dict = []
 
-    # Преобразование данных в словарь
-    for index, row in df.iterrows():
-        if type(row.values.item()) is str:
-            text = row.values.item()
+        for index, row in df.iterrows():
+            if type(row.values.item()) is str:
+                text = row.values.item()
+                one_client = self._search_inf_in_text(text)
+                data_dict.append(one_client)
 
-            one_client = search_inf_in_text(text)
+        return data_dict
 
-            data_dict.append(one_client)
+    def get_data_from_dikidi(self):
+        log = DIKIDI_LOGIN
+        password = DIKIDI_PASSWORD
+        company_id = DIKIDI_COMPANY_ID
 
-    return data_dict
+        api = DikidiAPI(
+            login=log,
+            password=password)
 
+        lists = api.get_appointment_list(company_id=company_id, date_start=self.date_object.strftime('%Y-%m-%d'),
+                                         date_end=self.date_object.strftime('%Y-%m-%d'), limit=50)
 
-def get_data_from_dikidi(tilda: int | datetime.datetime):
-    log = DIKIDI_LOGIN
-    password = DIKIDI_PASSWORD
-    company_id = DIKIDI_COMPANY_ID
+        if not lists:
+            raise DayIsEmptyError("Day is empty, change day or add clients in dikidi")
 
-    if type(tilda) == int:
-        date_object = datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=tilda),
-                                                datetime.time.min).strftime('%Y-%m-%d')
-    else:
-        date_object = tilda
+        data_list = []
+        for l in lists:
+            tmp_str = ""
+            tmp_str += l["time"][11:] + "\n"
+            tmp_str += l["client_title"] + "\n"
+            tmp_str += l["services"][0]["cost"] + " RUB" + "\n"
+            tmp_str += l["client_phone"] + "\n"
+            tmp_str += l["comment"] if l["comment"] else ''
+            one_client = self._search_inf_in_text(tmp_str)
+            data_list.append(one_client)
 
-    api = DikidiAPI(
-        login=log,
-        password=password)
+        date = get_date_from_str(lists[0]["time"])
+        sorted_clients = sorted(data_list, key=lambda x: x.time)
+        return date, sorted_clients
 
-    lists = api.get_appointment_list(company_id=company_id, date_start=date_object, date_end=date_object, limit=50)
+    def _search_inf_in_text(self, text):
+        match_time = re.search(REGEX_TIME, text)
+        time = match_time.group(0)
 
-    if not lists:
-        raise DayIsEmptyError("Day is empty, change day or add clients in dikidi")
+        match_name = re.search(REGEX_NAME, text, re.MULTILINE)
+        name = match_name.group(1)
 
-    data_dict = []
-    for l in lists:
-        tmp_str = ""
-        tmp_str += l["time"][11:] + "\n"
-        tmp_str += l["client_title"] + "\n"
-        tmp_str += l["services"][0]["cost"] + " RUB" + "\n"
-        tmp_str += l["client_phone"] + "\n"
-        tmp_str += l["comment"] if l["comment"] else ''
-        one_client = search_inf_in_text(tmp_str)
-        data_dict.append(one_client)
+        m = phonenumbers.PhoneNumberMatcher(text, 'RU').next()
+        phon = phonenumbers.format_number(m.number, phonenumbers.PhoneNumberFormat.E164)
 
-    date = get_date_from_str(lists[0]["time"])
-    sorted_clients = sorted(data_dict, key=lambda x: x["time"])
-    return date, sorted_clients
+        match_amount = re.search(REGEX_AMOUNT, text, re.MULTILINE)
+        amount = match_amount.group(1)
 
+        match_company = re.search(REGEX_COMPANY, text)
+        company = 'Инст' if not match_company else 'XF'
 
-def search_inf_in_text(text):
-    tmp_dict = {
-        'time': '',
-        'name': '',
-        'amount': 0,
-        'company': '',
-        'number': 0,
-        'sert': False,
-        'sert_id': 0,
-        'video': False,
-        'PAID': False,
-        'doplata': 0,
-    }
+        match_cert_xf = re.search(REGEX_SERT_XF, text)
+        match_cert_inst = re.search(REGEX_SERT_INST, text)
+        if match_cert_inst:
+            cert = Certificate(number=match_cert_inst.group(0), is_cert=True)
+        elif match_cert_xf:
+            cert = Certificate(is_cert=True, number=None)
+        else:
+            cert = None
 
-    match_time = re.search(REGEX_TIME, text)
-    tmp_dict['time'] = match_time.group(0)
+        match_video = re.search(REGEX_VIDEO, text)
+        video = True if match_video else False
 
-    match_name = re.search(REGEX_NAME, text, re.MULTILINE)
-    tmp_dict['name'] = match_name.group(1)
+        match_payment = re.search(REGEX_PAYMENT, text)
+        paid = True if match_payment else False
 
-    for m in phonenumbers.PhoneNumberMatcher(text, 'RU'):
-        tmp_dict['number'] = phonenumbers.format_number(m.number, phonenumbers.PhoneNumberFormat.E164)
+        match_dop = re.search(REGEX_DOP, text)
+        if (not match_dop and paid) or (cert and not match_dop):
+            surcharge = 0
+            paid = True
+        elif match_dop:
+            surcharge = match_dop.group(1)
+        else:
+            surcharge = AMOUNT
 
-    match_amount = re.search(REGEX_AMOUNT, text, re.MULTILINE)
-    tmp_dict['amount'] = match_amount.group(1)
+        if company == 'XF':
+            full_status = company + ' серт' if cert else company + ' нал'
+        else:
+            full_status = company if not cert else f'серт {cert.number}'
 
-    match_company = re.search(REGEX_COMPANY, text)
-    tmp_dict['company'] = 'Инст' if not match_company else 'XF'
-
-    if tmp_dict['company'] == 'XF':
-        match_sert_xf = re.search(REGEX_SERT_XF, text)
-        if match_sert_xf:
-            tmp_dict['sert'] = True
-
-    else:
-        match_sert_inst = re.search(REGEX_SERT_INST, text)
-        if match_sert_inst:
-            tmp_dict['sert'] = True
-            tmp_dict['sert_id'] = match_sert_inst.group(0)
-
-    match_video = re.search(REGEX_VIDEO, text)
-    tmp_dict['video'] = True if match_video else False
-
-    match_dop = re.search(REGEX_DOP, text)
-    tmp_dict['doplata'] = 0 if not match_dop else match_dop.group(1)
-
-    match_payment = re.search(REGEX_PAYMENT, text)
-    tmp_dict['paid'] = True if match_payment else False
-
-    return tmp_dict
+        return NewPassenger(
+            date=self.date_object.strftime("%d.%m.%y"),
+            time=time,
+            name=name,
+            phon=phon,
+            amount=amount,
+            company=company,
+            full_status=full_status,
+            cert=cert,
+            is_video=video,
+            surcharge=surcharge,
+            is_paid=paid
+        )

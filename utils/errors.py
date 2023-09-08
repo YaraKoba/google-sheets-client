@@ -4,3 +4,11 @@ class DayIsEmptyError(Exception):
 
 class SheetNotFoundByTitleError(Exception):
     pass
+
+
+class GetPassengerFromFileError(Exception):
+    pass
+
+
+class EmptyInfError(Exception):
+    pass

@@ -1,3 +1,4 @@
+import datetime
 import re
 
 MONTH = {'01': 'Января', '02': 'февраля', '03': 'марта', '04': 'апреля',
@@ -7,6 +8,10 @@ MONTH = {'01': 'Января', '02': 'февраля', '03': 'марта', '04':
 INF_MONTH = {'01': 'Январь', '02': 'Февраль', '03': 'Март', '04': 'Апрель',
              '05': 'Май', '06': 'Июнь', '07': 'Июль', '08': 'Август',
              '09': 'Сентябрь', '10': 'Октябрь', '11': 'Ноябрь', '12': 'Декабрь'}
+
+
+def convert_in_datetime(date: str) -> datetime.datetime:
+    return datetime.datetime.strptime(date, "%d.%m.%y")
 
 
 def get_date_from_file(file_name: str):
