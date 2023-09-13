@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-import json
 import os
 import os.path
 from dotenv import load_dotenv
@@ -30,36 +29,35 @@ class SheetInit:
         service = build('sheets', 'v4', credentials=self.creds)
         results = service.spreadsheets().batchUpdate(
             spreadsheetId=self.SPREADSHEET_ID,
-            body=
-            {
-                "requests": [
-                    {
-                        "addSheet": {
-                            "properties": {
-                                "title": title,
+            body={
+                    "requests": [
+                        {
+                            "addSheet": {
+                                "properties": {
+                                    "title": title,
+                                }
                             }
                         }
-                    }
-                ]
-            }).execute()
+                    ]
+                }).execute()
 
         return results
 
     def connect(self):
         work_dir = WORK_DIR
         SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
-        if os.path.exists(f'{work_dir}edit_xls/keys/token.json'):
-            self.creds = Credentials.from_authorized_user_file(f'{work_dir}edit_xls/keys/token.json', SCOPES)
+        if os.path.exists(f'{work_dir}google_sheet_client/keys/token.json'):
+            self.creds = Credentials.from_authorized_user_file(f'{work_dir}google_sheet_client/keys/token.json', SCOPES)
         # If there are no (valid) credentials available, let the user log in.
         if not self.creds or not self.creds.valid:
             if self.creds and self.creds.expired and self.creds.refresh_token:
                 self.creds.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    f'{work_dir}edit_xls/keys/credentials.json', SCOPES)
+                    f'{work_dir}google_sheet_client/keys/credentials.json', SCOPES)
                 self.creds = flow.run_local_server(port=0)
             # Save the credentials for the next run
-            with open(f'{work_dir}edit_xls/keys/token.json', 'w') as token:
+            with open(f'{work_dir}google_sheet_client/keys/token.json', 'w') as token:
                 token.write(self.creds.to_json())
 
     def get_client_object(self, sheet_inf):

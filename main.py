@@ -4,9 +4,9 @@ from typing import List
 from google.auth import exceptions
 from googleapiclient.errors import HttpError
 
-from edit_xls.connectors import StartDaily, EndDaily, AllCerts
-from edit_xls.writer_sheets import Connector
-from models.passnger_models import Passenger, PassengerWhoFlew
+from google_sheet_client.connectors import StartDaily, EndDaily, AllCerts
+from google_sheet_client.connectors import Connector
+from models.passnger_models import PassengerWhoFlew
 from utils.config_val import \
     check_env_val, \
     WORK_DIR, \
@@ -38,7 +38,6 @@ class Main:
         con = Connector(SIMPLE_SHEET_ID)
         end_day = EndDaily(self.daly_list_name, con, DATE)
         self.check_cert(end_day.passengers, mark=True)
-
 
     @staticmethod
     def check_cert(passengers: List[PassengerWhoFlew], mark: bool = False):

@@ -1,6 +1,6 @@
 from typing import List
 
-from edit_xls.google_sheets_client import SheetClient
+from google_sheet_client.google_sheets_client import SheetClient
 
 
 def is_valid_method(class_obj: object, method_name: str):
@@ -8,6 +8,8 @@ def is_valid_method(class_obj: object, method_name: str):
         cls = class_obj
         return hasattr(cls, method_name) and callable(getattr(cls, method_name))
     except KeyError:
+        return False
+    except TypeError:
         return False
 
 

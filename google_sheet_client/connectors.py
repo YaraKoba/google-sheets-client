@@ -5,15 +5,16 @@ from typing import List, Dict
 
 from googleapiclient.errors import HttpError
 
-from edit_xls.google_sheets_client import SheetInit, SheetClient
+from google_sheet_client.google_sheets_client import SheetInit, SheetClient
 from editer.writer import StartWriter, CertWriter, EndWriter
 from models.passnger_models import Certificate, Passenger, NewPassenger, PassengerWhoFlew
 from models.table_models import TableBlock
-from pars_xls.pars_xls import NewPassengers
+from api.pars_xls import NewPassengers
 from utils.config_val import WORK_DIR
 from utils.date_client import convert_in_datetime, get_date_to_general_report
 from utils.errors import SheetNotFoundByTitleError, GetPassengerFromFileError
-from utils.update_cert import REGEX_CERT_INST
+from utils.parser_input import AIGUL, FATHER
+from utils.regex import REGEX_CERT_INST
 
 
 class Connector:
@@ -46,10 +47,9 @@ class Connector:
         client = self.get_client_by_title(title)
         return client.get_data_from_sheet()
 
-    def get_inf_cell(self, cell):
-        sheet_list = self.sheet.get_sheets()
-        client = self.sheet.get_client_object(sheet_list[0])
-        client.get_format(cell)
+    def get_inf_cell(self, title, cell_greed):
+        client = self.get_client_by_title(title)
+        client.get_format(cell_greed)
 
 
 class SheetList:
@@ -120,13 +120,14 @@ class StartDaily(Daily):
                  connector: Connector,
                  date: str,
                  is_from_file: bool = False,
-                 file_path: str | None = None
+                 file_path: str | None = None,
+                 debug: bool = False,
                  ):
         if is_from_file and not file_path:
             raise GetPassengerFromFileError("not found file_path")
         self.is_from_file = is_from_file
         self.file_path = file_path
-
+        self.debug = debug
         super().__init__(list_name, connector, date)
 
     def _get_client(self):
@@ -136,7 +137,10 @@ class StartDaily(Daily):
         except HttpError as er:
             if er.status_code == 400 and "уже существует" in str(er.error_details):
                 print(f'ОШИБКА: {str(er.error_details)}\nВыберете другой день')
-                exit(1)
+                if self.debug:
+                    return self.connector.get_client_by_title(self.list_name)
+                else:
+                    exit(1)
 
     def _get_passengers(self):
         print(2)
@@ -181,12 +185,6 @@ class StartDaily(Daily):
 
 
 class EndDaily(Daily):
-    def __init__(self, list_name: str, connector: Connector, date: str):
-        super().__init__(list_name, connector, date)
-        self._get_passengers()
-
-
-
     def _create_passenger_object(self, line: List[str | int]) -> Passenger:
         if len(line) < 9 or not line[8] or not line[7]:
             print("Не заполнены поля Оплата и Видео!")
@@ -218,9 +216,9 @@ class AllCerts:
     def __init__(self, passengers: List[PassengerWhoFlew], connector: Connector):
         self.connector = connector
         self.passengers = passengers
+        self.global_list_name = self._get_global_list_name()
         self.our_certs, self.xf_certs = self._divide_certs()
         self.clients = self._get_clients()
-        self.global_list_name = self._get_global_list_name()
 
     def _get_global_list_name(self) -> str:
         if self.passengers:
@@ -231,19 +229,32 @@ class AllCerts:
             exit(1)
 
     def write_global_sheet(self):
-        inf = [ps.convert_to_list() for ps in self.passengers]
-        sheet_data = self.connector.read_sheet_by_title(self.global_list_name)
+        client = self.connector.get_client_by_title(self.global_list_name)
+        end_entry = self.get_end_entry(client.get_data_from_sheet())
+        inf = self.get_inf(end_entry)
         table = TableBlock(
             inf=inf,
-            start_row=self.get_end_entry(sheet_data),
+            start_row=end_entry,
             start_colum=0
         )
 
-        w = EndWriter(self.connector.get_client_by_title(self.global_list_name), inf=table)
+        w = EndWriter(client, inf=table)
         w.execute_all()
 
+    def get_inf(self, end_entry: int) -> List[List[str]]:
+        aigul = 3000 / len(self.passengers) * AIGUL
+        result = []
+        for index, ps in enumerate(self.passengers):
+            base_inf = ps.convert_to_list() + [aigul]
+            row = end_entry + index + 1
+            salary_father = [f'=(E{row}-H{row}-J{row}-K{row})*{FATHER}%']
+            salary_all = [f'=E{row}-H{row}-J{row}-I{row}-K{row}-L{row}+F{row}+G{row}']
+            result.append(base_inf + salary_father + salary_all)
+        return result
+
+
     @staticmethod
-    def get_end_entry(sheet_data: List[List[str]]):
+    def get_end_entry(sheet_data: List[List[str]]) -> int:
         for index in range(len(sheet_data) - 1, 0, -1):
             line = sheet_data[index]
             if line and line[0]:
@@ -273,11 +284,10 @@ class AllCerts:
 
     def mark_cert(self, ps: Passenger):
         if ps.cert.error:
-            print(f'Клиент {ps.cert.number} line {ps.cert.line} {ps.cert.error}')
+            print(f'Серт НЕ был отмечен {ps.cert.number} line {ps.cert.line} {ps.cert.error}')
             return
         date = [[ps.date]]
         column = 6 if ps.cert.list_name == 'Серт 2022' else 5
-        print(ps.cert.line)
         table = TableBlock(
             inf=date,
             start_row=ps.cert.line - 1,
@@ -294,11 +304,14 @@ class AllCerts:
         our_cert = len(self.our_certs)
         xf_cash = len([xf for xf in self.passengers if xf.company == 'XF' and not xf.cert])
         xf_cert = len(self.xf_certs)
-        video = len([ps for ps in self.passengers if ps.payment_video])
-
-        report = f"total: {all_ps}\nour_cert: {our_cert}\nxf_cash: {xf_cash}\nxf_cert: {xf_cert}\nvideo: {video}"
-        table_cert = [f'{c.cert.number} {c.cert.error} {c.cert.line} {c.cert.video} {c.cert.amount}'
-                      for c in self.passengers if c.cert and c.cert.number]
+        video = len([ps for ps in self.passengers if ps.payment_video and ps.payment_video != '-'])
+        report = '_____________________________\n'
+        report += f"total: {all_ps}\nour_cert: {our_cert}\nxf_cash: {xf_cash}\nxf_cert: {xf_cert}\nvideo: {video}"
+        report += '\n_____________________________\nCerts:'
+        table_cert = [
+            f'num:{c.cert.number} line:{c.cert.line} video:{c.cert.video} {c.cert.amount}p. err:{c.cert.error}'
+            for c in self.passengers if c.cert and c.cert.number
+        ]
 
         print(report)
         for r in table_cert:

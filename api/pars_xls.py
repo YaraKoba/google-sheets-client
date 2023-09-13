@@ -2,23 +2,13 @@ import datetime
 import re
 from utils.config_val import DIKIDI_COMPANY_ID, DIKIDI_LOGIN, DIKIDI_PASSWORD, AMOUNT
 from dotenv import load_dotenv
-from pars_xls.dikidi_api import DikidiAPI
+from api.dikidi_api import DikidiAPI
 from utils.errors import DayIsEmptyError
 import pandas as pd
 import phonenumbers
 from models.passnger_models import Certificate, NewPassenger
-
+from utils.regex import *
 from utils.date_client import get_date_from_str
-
-REGEX_NAME = r'^(?:.*\n){1}(.*)$'
-REGEX_AMOUNT = r'(\d{4}) RUB'
-REGEX_COMPANY = r'[Xx][Ff]'
-REGEX_SERT_INST = r'\b\d{5,8}\b'
-REGEX_SERT_XF = r'[Сс]ерт(?:ификат)?'
-REGEX_VIDEO = r'\+\s?[Вв](?:идео)?\b'
-REGEX_TIME = r'\d{2}:\d{2}'
-REGEX_DOP = r'[Дд]оплата.(\d+)'
-REGEX_PAYMENT = r'[Оо]пла(?:чено|тила?)'
 
 load_dotenv()
 
@@ -89,8 +79,8 @@ class NewPassengers:
         match_company = re.search(REGEX_COMPANY, text)
         company = 'Инст' if not match_company else 'XF'
 
-        match_cert_xf = re.search(REGEX_SERT_XF, text)
-        match_cert_inst = re.search(REGEX_SERT_INST, text)
+        match_cert_xf = re.search(REGEX_CERT_XF, text)
+        match_cert_inst = re.search(REGEX_CERT_INST, text)
         if match_cert_inst:
             cert = Certificate(number=match_cert_inst.group(0), is_cert=True)
         elif match_cert_xf:

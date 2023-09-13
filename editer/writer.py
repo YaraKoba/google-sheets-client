@@ -1,4 +1,4 @@
-from edit_xls.google_sheets_client import SheetClient
+from google_sheet_client.google_sheets_client import SheetClient
 from models.table_models import TableBlock, FormatBlock
 from editer.formats import COLOR_AMOUNT, COLOR_TITLE, COLOR_BORDER, YELLOW, COLOR_CERT, COLOR_XF, COLOR_DATE
 from editer.modal import ModalElement, is_valid_method
@@ -21,6 +21,7 @@ class Writer:
                     self.inf.body[row][colum] = ''
 
     def execute_all(self):
+        print(f'Writing to {self.client.sheet_inf["title"]}')
         self.client.execute()
         self.client.add_values(self.inf.get_greet(), self.inf.body)
 
@@ -75,6 +76,7 @@ class EndWriter(Writer):
             end_colum=self.inf.end_colum
         )
 
+        # format rule
         self.client.add_conditional_format_rule(greed.get_colum(6), bg_rgba=COLOR_CERT, user_entered_value=-5500)
         self.client.add_conditional_format_rule(greed.get_colum(3), bg_rgba=COLOR_XF, user_entered_value="XF",
                                                 type_rule="TEXT_CONTAINS")
@@ -86,7 +88,6 @@ class EndWriter(Writer):
 
         # table
         self.client.format_cell(greed.get_rectangle(0, 1), font_size=13)
-
         self.client.update_borders(greed.get_greet())
         self.client.update_borders(greed.get_row(0), width_top=3)
 
