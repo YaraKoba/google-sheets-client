@@ -116,14 +116,14 @@ class PassengerWhoFlew(Passenger):
     def get_amount(self):
         if self.cert and self.cert.amount:
             return self.cert.amount
-        elif not self.cert and (not self.amount or int(self.amount) < MIN_PRICE):
+        elif not self.amount or int(self.amount) < MIN_PRICE:
             return AMOUNT
         return self.amount
 
     def get_video(self):
         if self.cert and self.cert.video:
             return '-200'
-        elif self.payment_video in ['нал', 'карта Ярика']:
+        elif self.payment_video in ['нал', 'карта Ярика', 'оплачено']:
             return '300'
         else:
             return ''

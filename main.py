@@ -57,7 +57,7 @@ if __name__ == "__main__":
             print(f'ОШИБКА: {str(er.error_details)}\nВыберете другой день')
             exit(1)
     except exceptions.RefreshError as er:
-        os.remove(f"{WORK_DIR}edit_xls/keys/token.json")
+        os.remove(f"{WORK_DIR}google_sheet_client/keys/token.json")
         print('Авторизуйтесь в google акаунт')
         mode = Main(MODE)
     except DayIsEmptyError as er:

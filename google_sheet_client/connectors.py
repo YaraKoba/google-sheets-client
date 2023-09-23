@@ -143,7 +143,6 @@ class StartDaily(Daily):
                     exit(1)
 
     def _get_passengers(self):
-        print(2)
         passengers = NewPassengers(self.date)
         if self.is_from_file:
             self.passengers = passengers.get_data_from_xls(self.file_path)

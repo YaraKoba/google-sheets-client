@@ -1,22 +1,11 @@
 import json
-import os
 from typing import List
 
-from google.auth import exceptions
-from googleapiclient.errors import HttpError
-
-from google_sheet_client.connectors import StartDaily, EndDaily, AllCerts
 from google_sheet_client.connectors import Connector
-from models.passnger_models import PassengerWhoFlew, NewPassenger, Certificate
-from utils.config_val import \
-    check_env_val, \
-    WORK_DIR, \
-    SIMPLE_SHEET_ID, \
-    FILE_PATH, \
-    GENERAL_SHEET_ID
+from google_sheet_client.connectors import StartDaily
+from models.passnger_models import NewPassenger, Certificate
+from utils.config_val import WORK_DIR, SIMPLE_SHEET_ID
 from utils.date_client import get_date_to_daly_report
-from utils.errors import DayIsEmptyError, SheetNotFoundByTitleError
-from utils.parser_input import IS_FROM_FILE, MODE, DATE
 
 
 def get_passengers(list_name, date) -> StartDaily:
@@ -39,13 +28,13 @@ def read_passenger_from_json(date):
         return res
 
 
-def check_passengers(one: List, two: List):
-    while one and two:
-        ps1 = one.pop(0)
-        ps2 = two.pop(0)
+def check_passengers(correct: List, new: List):
+    while correct and new:
+        ps1 = correct.pop(0)
+        ps2 = new.pop(0)
 
-        print(ps1)
-        print(ps2)
+        print(f'cor {ps1}')
+        print(f'new {ps2}')
 
         assert ps1 == ps2
 
