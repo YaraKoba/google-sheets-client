@@ -3,6 +3,8 @@ from_file = <0/1 bool_param int>
 tilda = 0 <time_tilda int>
 amount = <price int>
 min_price = <min_price int>
+xf_price = <xf price int>
+
 
 [File]
 file_path = <path_in_xls_file str>
