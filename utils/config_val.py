@@ -25,6 +25,7 @@ TILDA_CONF = config.getint('conf', 'tilda', fallback=0)
 FILE_PATH = config.get('File', 'file_path', fallback='')
 AMOUNT = config.getint('conf', 'amount', fallback=5000)
 MIN_PRICE = config.getint('conf', 'min_price', fallback=3500)
+XF_price = config.getint('conf', 'xf_price', fallback=500)
 
 
 def check_env_val():

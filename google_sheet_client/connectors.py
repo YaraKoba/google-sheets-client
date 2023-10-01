@@ -301,7 +301,8 @@ class AllCerts:
     def create_terminal_report(self):
         all_ps = len(self.passengers)
         our_cert = len(self.our_certs)
-        xf_cash = len([xf for xf in self.passengers if xf.company == 'XF' and not xf.cert])
+        print(self.passengers)
+        xf_cash = len([xf for xf in self.passengers if "XF" in xf.company and not xf.cert])
         xf_cert = len(self.xf_certs)
         video = len([ps for ps in self.passengers if ps.payment_video and ps.payment_video != '-'])
         report = '_____________________________\n'

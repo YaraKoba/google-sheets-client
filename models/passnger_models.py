@@ -1,8 +1,10 @@
+import re
 from dataclasses import dataclass, field
 from typing import List
 
-from utils.config_val import AMOUNT, MIN_PRICE
+from utils.config_val import AMOUNT, MIN_PRICE, XF_price
 from utils.search import separate_cert, two_point_search
+from utils.regex import REGEX_COMPANY
 
 
 @dataclass(order=True)
@@ -114,11 +116,16 @@ class PassengerWhoFlew(Passenger):
         return f'-{self.cert.amount}' if self.cert and self.cert.number else ''
 
     def get_amount(self):
+        amount = 0
+        if re.search(REGEX_COMPANY, self.company):
+            amount -= XF_price
         if self.cert and self.cert.amount:
-            return self.cert.amount
+            amount = int(self.cert.amount)
         elif not self.amount or int(self.amount) < MIN_PRICE:
-            return AMOUNT
-        return self.amount
+            amount += int(AMOUNT)
+        else:
+            amount += int(self.amount)
+        return str(amount)
 
     def get_video(self):
         if self.cert and self.cert.video:
